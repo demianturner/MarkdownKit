@@ -46,16 +46,25 @@ open class MarkdownLink: MarkdownLinkElement {
   }
 
   open func match(_ match: NSTextCheckingResult, attributedString: NSMutableAttributedString) {
+    let titleRangeLocation = match.range(at: 1).location
+    let urlRangeLocation = match.range(at: 2).location
+
+    // Prevent crashes on malformed links
+    guard match.numberOfRanges > 2,
+        titleRangeLocation != NSNotFound,
+        urlRangeLocation != NSNotFound else {
+        return
+    }
+
     // Remove opening bracket
-    attributedString.deleteCharacters(in: NSRange(location: match.range(at: 1).location, length: 1))
+    attributedString.deleteCharacters(in: NSRange(location: titleRangeLocation, length: 1))
 
     // Remove closing bracket
-    attributedString.deleteCharacters(in: NSRange(location: match.range(at: 2).location - 1, length: 1))
+    attributedString.deleteCharacters(in: NSRange(location: urlRangeLocation - 1, length: 1))
 
-    let urlStart = match.range(at: 2).location
 
     let string = NSString(string: attributedString.string)
-    var urlString = String(string.substring(with: NSRange(urlStart..<match.range(at: 2).upperBound - 2 )))
+    var urlString = String(string.substring(with: NSRange(urlRangeLocation..<match.range(at: 2).upperBound - 2 )))
 
     // Balance opening and closing parantheses inside the url
     var numberOfOpeningParantheses = 0
@@ -73,13 +82,13 @@ open class MarkdownLink: MarkdownLinkElement {
     }
 
     // Remove opening parantheses
-    attributedString.deleteCharacters(in: NSRange(location: match.range(at: 2).location, length: 1))
+    attributedString.deleteCharacters(in: NSRange(location: urlRangeLocation, length: 1))
 
     // Remove closing parantheses
-    let trailingMarkdownRange = NSRange(location: match.range(at: 2).location - 1, length: urlString.count + 1)
+    let trailingMarkdownRange = NSRange(location: urlRangeLocation - 1, length: urlString.count + 1)
     attributedString.deleteCharacters(in: trailingMarkdownRange)
 
-    let formatRange = NSRange(match.range(at: 1).location..<match.range(at: 2).location - 1)
+    let formatRange = NSRange(titleRangeLocation..<urlRangeLocation - 1)
 
     // Add attributes while preserving current attributes
 
